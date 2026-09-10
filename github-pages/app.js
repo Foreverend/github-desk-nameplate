@@ -362,6 +362,7 @@ function buildGrid() {
   el.grid = rendered.grid;
   el.columnNumbers = rendered.columnNumbers;
   for (const row of rendered.cells) cellEls.push(row);
+  enableMouseDragPainting();
 }
 
 function buildPalette() {
@@ -507,12 +508,148 @@ function setActive(i) {
 
 function toggleCell(r, c, index) {
   // Toggle: painting a cell that already has this color clears it.
-  state.grid[r][c] = state.grid[r][c] === index ? null : index;
+  setCellValue(r, c, state.grid[r][c] === index ? null : index);
+  updateCounts();
+  save();
+}
+
+function setCellValue(r, c, value) {
+  if (state.grid[r][c] === value) return false;
+  state.grid[r][c] = value;
   state.lastModified = { row: r, col: c };
   state.arrowStart = null; // a fresh edit resets the arrow-nav start point
   paintCell(r, c);
-  updateCounts();
-  save();
+  return true;
+}
+
+function gridCellFromPoint(clientX, clientY) {
+  const rect = el.grid.getBoundingClientRect();
+  const x = clientX - rect.left;
+  const y = clientY - rect.top;
+  if (x < 0 || y < 0 || x > rect.width || y > rect.height) return null;
+
+  const styles = getComputedStyle(el.grid);
+  const cell = parseFloat(styles.getPropertyValue("--nameplate-cell"));
+  const gap = parseFloat(styles.getPropertyValue("--nameplate-gap"));
+  const step = cell + gap;
+  const row = Math.max(0, Math.min(rows - 1, Math.round((y - cell / 2) / step)));
+  const col = Math.max(0, Math.min(cols - 1, Math.round((x - cell / 2) / step)));
+  return { row, col };
+}
+
+function cellsBetween(from, to) {
+  const cells = [];
+  let x = from.col;
+  let y = from.row;
+  const dx = Math.abs(to.col - x);
+  const sx = x < to.col ? 1 : -1;
+  const dy = -Math.abs(to.row - y);
+  const sy = y < to.row ? 1 : -1;
+  let error = dx + dy;
+
+  while (true) {
+    cells.push({ row: y, col: x });
+    if (x === to.col && y === to.row) break;
+    const doubledError = error * 2;
+    if (doubledError >= dy) {
+      error += dy;
+      x += sx;
+    }
+    if (doubledError <= dx) {
+      error += dx;
+      y += sy;
+    }
+  }
+  return cells;
+}
+
+function enableMouseDragPainting() {
+  let drag = null;
+  let suppressClick = false;
+
+  function paintDragTo(cell) {
+    if (!drag || !cell) return;
+    const from = drag.last || drag.start;
+    if (cell.row === from.row && cell.col === from.col) return;
+    drag.didDrag = true;
+    for (const location of cellsBetween(from, cell)) {
+      const key = `${location.row}:${location.col}`;
+      if (drag.painted.has(key)) continue;
+      drag.painted.add(key);
+      drag.changed =
+        setCellValue(location.row, location.col, drag.value) || drag.changed;
+    }
+    drag.last = cell;
+  }
+
+  function finishDrag(event) {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    if (drag.didDrag) {
+      suppressClick = true;
+      setTimeout(() => {
+        suppressClick = false;
+      }, 0);
+      if (drag.changed) {
+        updateCounts();
+        save();
+      }
+    }
+    if (drag.captureTarget.hasPointerCapture(event.pointerId)) {
+      drag.captureTarget.releasePointerCapture(event.pointerId);
+    }
+    drag = null;
+  }
+
+  el.grid.addEventListener("pointerdown", (event) => {
+    if (
+      event.pointerType !== "mouse" ||
+      event.button !== 0 ||
+      !event.isPrimary
+    ) {
+      return;
+    }
+    const start = gridCellFromPoint(event.clientX, event.clientY);
+    if (!start) return;
+    clearHighlight();
+    drag = {
+      pointerId: event.pointerId,
+      captureTarget: event.target,
+      start,
+      last: null,
+      value:
+        state.grid[start.row][start.col] === state.active ? null : state.active,
+      painted: new Set(),
+      changed: false,
+      didDrag: false,
+    };
+    drag.captureTarget.setPointerCapture(event.pointerId);
+  });
+
+  el.grid.addEventListener("pointermove", (event) => {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    if (!(event.buttons & 1)) {
+      finishDrag(event);
+      return;
+    }
+    paintDragTo(gridCellFromPoint(event.clientX, event.clientY));
+    if (drag?.didDrag) event.preventDefault();
+  });
+
+  el.grid.addEventListener("pointerup", (event) => {
+    paintDragTo(gridCellFromPoint(event.clientX, event.clientY));
+    finishDrag(event);
+  });
+  el.grid.addEventListener("pointercancel", finishDrag);
+  el.grid.addEventListener(
+    "click",
+    (event) => {
+      if (!suppressClick || event.detail === 0) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      suppressClick = false;
+    },
+    true
+  );
 }
 
 function paintCell(r, c) {

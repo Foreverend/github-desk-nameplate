@@ -799,6 +799,8 @@ kbd {
   grid-auto-flow: column;
   grid-auto-columns: var(--nameplate-cell);
   gap: var(--nameplate-gap);
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .nameplate-cell {
