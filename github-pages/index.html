@@ -193,7 +193,39 @@
           </div>
         </div>
 
-        <div class="toolbar-group shape-tools" role="group" aria-label="Add shape">
+        <div
+          class="toolbar-group shape-tools"
+          role="group"
+          aria-label="History and shapes"
+        >
+          <button
+            type="button"
+            id="undo"
+            class="history-btn"
+            aria-label="Undo"
+            aria-keyshortcuts="Control+Z Meta+Z"
+            title="Undo (Ctrl/Command+Z)"
+            disabled
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 7 4 12l5 5" />
+              <path d="M4 12h9a7 7 0 0 1 7 7" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            id="redo"
+            class="history-btn"
+            aria-label="Redo"
+            aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y"
+            title="Redo (Ctrl/Command+Shift+Z)"
+            disabled
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m15 7 5 5-5 5" />
+              <path d="M20 12h-9a7 7 0 0 0-7 7" />
+            </svg>
+          </button>
           <button
             type="button"
             class="shape-btn"
@@ -345,7 +377,9 @@
           <p>
             On desktop: use arrow keys to move.<br />
             Press <kbd>Space</kbd> or <kbd>Enter</kbd> to insert/remove.<br />
-            Press <kbd>Tab</kbd> to switch colors.
+            Press <kbd>Tab</kbd> to switch colors.<br />
+            Press <kbd>Ctrl</kbd>/<kbd>Command</kbd> + <kbd>Z</kbd> to undo and
+            add <kbd>Shift</kbd> to redo.
           </p>
         </section>
 

@@ -229,7 +229,8 @@ main {
   gap: 8px;
 }
 
-.shape-btn {
+.shape-btn,
+.history-btn {
   width: 52px;
   min-height: 44px;
   padding: 4px 8px;
@@ -242,18 +243,43 @@ main {
   cursor: pointer;
 }
 
-.shape-btn:hover {
+.history-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+}
+
+.history-btn svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.shape-btn:hover,
+.history-btn:hover:not(:disabled) {
   border-color: var(--muted);
   background: #f6f8fa;
 }
 
-.shape-btn:active {
+.shape-btn:active,
+.history-btn:active:not(:disabled) {
   transform: translateY(1px);
 }
 
-.shape-btn:focus-visible {
+.shape-btn:focus-visible,
+.history-btn:focus-visible {
   outline: 3px solid rgba(9, 105, 218, 0.2);
   outline-offset: 2px;
+}
+
+.history-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .toolbar-file-actions {

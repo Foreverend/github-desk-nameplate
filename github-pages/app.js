@@ -71,6 +71,7 @@ const NAMEPLATE_LAYOUT = Object.freeze({
 const ZOOM_MIN = 1;
 const ZOOM_MAX = 6;
 const ZOOM_STEP = 0.25;
+const HISTORY_LIMIT = 100;
 const DEFAULT_MOBILE_ZOOMS = {
   portrait: 2.00,
   landscape: 1.00,
@@ -322,6 +323,8 @@ const el = {
   downloadDesign: document.getElementById("download-design"),
   shiftLeft: document.getElementById("shift-left"),
   shiftRight: document.getElementById("shift-right"),
+  undo: document.getElementById("undo"),
+  redo: document.getElementById("redo"),
   canvas: document.getElementById("export-canvas"),
   zoomIn: document.getElementById("zoom-in"),
   zoomOut: document.getElementById("zoom-out"),
@@ -339,6 +342,8 @@ const el = {
 };
 
 const cellEls = []; // cellEls[r][c] -> button element
+const undoStack = [];
+const redoStack = [];
 
 async function loadSubtitle() {
   try {
@@ -477,6 +482,7 @@ function addCustomColor(value) {
   updateCounts();
   setActive(colors.length - 1);
   save();
+  recordHistory();
 }
 
 function removeCustomColor(index) {
@@ -499,6 +505,7 @@ function removeCustomColor(index) {
   repaintAll();
   updateCounts();
   save();
+  recordHistory();
 }
 
 // Relative brightness (0–1) of a hex color.
@@ -529,9 +536,15 @@ function setActive(i) {
 
 function toggleCell(r, c, index) {
   // Toggle: painting a cell that already has this color clears it.
-  setCellValue(r, c, state.grid[r][c] === index ? null : index);
+  const changed = setCellValue(
+    r,
+    c,
+    state.grid[r][c] === index ? null : index
+  );
+  if (!changed) return;
   updateCounts();
   save();
+  recordHistory();
 }
 
 function setCellValue(r, c, value) {
@@ -613,6 +626,7 @@ function enableMouseDragPainting() {
       if (drag.changed) {
         updateCounts();
         save();
+        recordHistory();
       }
     }
     if (drag.captureTarget.hasPointerCapture(event.pointerId)) {
@@ -777,6 +791,27 @@ function clearHighlight() {
 }
 
 function onKeyDown(e) {
+  const modifier = e.ctrlKey || e.metaKey;
+  const key = e.key.toLowerCase();
+  const editable =
+    e.target instanceof HTMLElement &&
+    (e.target.isContentEditable ||
+      e.target.tagName === "INPUT" ||
+      e.target.tagName === "TEXTAREA");
+  if (modifier && !e.altKey && !editable) {
+    if (key === "z") {
+      e.preventDefault();
+      if (e.shiftKey) redo();
+      else undo();
+      return;
+    }
+    if (key === "y" && !e.shiftKey) {
+      e.preventDefault();
+      redo();
+      return;
+    }
+  }
+
   if (e.target.tagName === "INPUT") return;
   // Never override browser/OS shortcuts (e.g. Ctrl+R to refresh).
   if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -827,6 +862,7 @@ function onKeyDown(e) {
     paintCell(row, col);
     updateCounts();
     save();
+    recordHistory();
     return;
   }
 
@@ -965,6 +1001,73 @@ function load() {
     state.textSize = textSize;
   if (["left", "center", "right"].includes(data.textAlign))
     state.textAlign = data.textAlign;
+}
+
+/* --------------------------------------------------------------------- */
+/* Undo / redo                                                           */
+/* --------------------------------------------------------------------- */
+function captureHistoryState() {
+  return {
+    grid: state.grid.map((row) => [...row]),
+    plateColor: state.plateColor,
+    logoColor: state.logoColor,
+    customColors: customColorValues(),
+  };
+}
+
+function historyStateKey(snapshot) {
+  return JSON.stringify(snapshot);
+}
+
+function updateHistoryButtons() {
+  el.undo.disabled = undoStack.length <= 1;
+  el.redo.disabled = redoStack.length === 0;
+}
+
+function recordHistory() {
+  const snapshot = captureHistoryState();
+  const previous = undoStack[undoStack.length - 1];
+  if (previous && historyStateKey(previous) === historyStateKey(snapshot)) {
+    updateHistoryButtons();
+    return;
+  }
+  undoStack.push(snapshot);
+  if (undoStack.length > HISTORY_LIMIT + 1) undoStack.shift();
+  redoStack.length = 0;
+  updateHistoryButtons();
+}
+
+function restoreHistoryState(snapshot) {
+  restoreCustomColors(snapshot.customColors);
+  state.grid = snapshot.grid.map((row) => [...row]);
+  state.active = Math.min(state.active, colors.length - 1);
+  state.plateColor = snapshot.plateColor;
+  state.logoColor = snapshot.logoColor;
+  state.highlight = null;
+  state.lastModified = null;
+  state.arrowStart = null;
+  buildPalette();
+  applyColors();
+  repaintAll();
+  updateCounts();
+  setActive(state.active);
+  save();
+}
+
+function undo() {
+  recordHistory();
+  if (undoStack.length <= 1) return;
+  redoStack.push(undoStack.pop());
+  restoreHistoryState(undoStack[undoStack.length - 1]);
+  updateHistoryButtons();
+}
+
+function redo() {
+  const snapshot = redoStack.pop();
+  if (!snapshot) return;
+  undoStack.push(snapshot);
+  restoreHistoryState(snapshot);
+  updateHistoryButtons();
 }
 
 /* --------------------------------------------------------------------- */
@@ -1279,7 +1382,8 @@ function roundRect(ctx, x, y, w, h, r) {
 /* Wire up                                                               */
 /* --------------------------------------------------------------------- */
 function clearAll() {
-  if (!confirm("Clear all dots? This cannot be undone.")) return;
+  if (!state.grid.some((row) => row.some((value) => value !== null))) return;
+  if (!confirm("Clear all dots?")) return;
   state.grid = Array.from({ length: rows }, () => Array(cols).fill(null));
   state.lastModified = null;
   state.arrowStart = null;
@@ -1287,6 +1391,7 @@ function clearAll() {
   repaintAll();
   updateCounts();
   save();
+  recordHistory();
 }
 
 // Shift every dot by one column. delta = -1 shifts left, +1 shifts right.
@@ -1306,6 +1411,7 @@ function shiftColumns(delta) {
   repaintAll();
   updateCounts();
   save();
+  recordHistory();
 }
 
 function addShape(shapeName) {
@@ -1341,6 +1447,7 @@ function addShape(shapeName) {
   repaintAll();
   updateCounts();
   save();
+  recordHistory();
 }
 
 /* --------------------------------------------------------------------- */
@@ -1420,6 +1527,7 @@ function applyText(raw) {
   repaintAll();
   updateCounts();
   save();
+  recordHistory();
 }
 
 // Change the letter size for the write-a-word tool and re-render the current
@@ -1558,6 +1666,7 @@ function applyDesignData(design, grid) {
   updateCounts();
   setActive(state.active);
   save();
+  recordHistory();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -1887,6 +1996,7 @@ function init() {
   repaintAll();
   updateCounts();
   setActive(state.active);
+  recordHistory();
   el.columnNumbers.hidden = !state.showColumnNumbers;
   el.showColumnNumbers.checked = state.showColumnNumbers;
 
@@ -1895,11 +2005,13 @@ function init() {
     applyColors();
     save();
   });
+  el.plateColor.addEventListener("change", recordHistory);
   el.logoColor.addEventListener("input", (e) => {
     state.logoColor = e.target.value;
     applyColors();
     save();
   });
+  el.logoColor.addEventListener("change", recordHistory);
   el.customColor.addEventListener("change", (e) =>
     addCustomColor(e.target.value)
   );
@@ -1926,6 +2038,8 @@ function init() {
   el.downloadDesign.addEventListener("click", downloadDesign);
   el.shiftLeft.addEventListener("click", () => shiftColumns(-1));
   el.shiftRight.addEventListener("click", () => shiftColumns(1));
+  el.undo.addEventListener("click", undo);
+  el.redo.addEventListener("click", redo);
   el.zoomIn.addEventListener("click", () => setZoom(state.zoom + ZOOM_STEP));
   el.zoomOut.addEventListener("click", () => setZoom(state.zoom - ZOOM_STEP));
   setZoom(state.zoom, false); // initialize label + button disabled states
