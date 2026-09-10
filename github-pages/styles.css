@@ -460,6 +460,7 @@ main {
 .swatch {
   position: relative;
   width: 100%;
+  aspect-ratio: 1;
   min-height: 44px;
   display: inline-flex;
   align-items: center;
