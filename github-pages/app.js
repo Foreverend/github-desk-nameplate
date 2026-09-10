@@ -34,6 +34,26 @@ const PNG_SIGNATURE = new Uint8Array([
 ]);
 const UTF8_ENCODER = new TextEncoder();
 const UTF8_DECODER = new TextDecoder();
+const SHAPES = Object.freeze({
+  heart: [
+    ".##.##.",
+    "#######",
+    "#######",
+    ".#####.",
+    "..###..",
+    "...#...",
+    ".......",
+  ],
+  snowflake: [
+    "#..#..#",
+    ".#.#.#.",
+    "..###..",
+    "#######",
+    "..###..",
+    ".#.#.#.",
+    "#..#..#",
+  ],
+});
 
 // Every nameplate location uses this geometry. Measurements are ratios of one
 // cell so previews, the editor, zoomed views, and exports keep identical
@@ -1268,6 +1288,41 @@ function shiftColumns(delta) {
   save();
 }
 
+function addShape(shapeName) {
+  const shape = SHAPES[shapeName];
+  if (!shape) return;
+
+  const width = shape[0].length;
+  let rightmost = -1;
+  for (let r = 0; r < rows; r++) {
+    for (let c = cols - 1; c >= 0; c--) {
+      if (state.grid[r][c] !== null) {
+        rightmost = Math.max(rightmost, c);
+        break;
+      }
+    }
+  }
+
+  const start = rightmost < 0 ? 0 : rightmost + 2;
+  if (start + width > cols) {
+    alert("There is not enough room to add this shape.");
+    return;
+  }
+
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < width; c++) {
+      if (shape[r][c] === "#") state.grid[r][start + c] = state.active;
+    }
+  }
+
+  state.highlight = null;
+  state.lastModified = null;
+  state.arrowStart = null;
+  repaintAll();
+  updateCounts();
+  save();
+}
+
 /* --------------------------------------------------------------------- */
 /* Side menu (drawer)                                                    */
 /* --------------------------------------------------------------------- */
@@ -1836,6 +1891,9 @@ function init() {
     button.addEventListener("click", () => setTextAlign(button.dataset.align));
   });
   setTextAlign(state.textAlign);
+  document.querySelectorAll(".shape-btn").forEach((button) => {
+    button.addEventListener("click", () => addShape(button.dataset.shape));
+  });
   el.textInput.value = state.textValue;
   el.saveDesignBtn.addEventListener("click", saveDesign);
   // Escape closes the drawer even while a menu input is focused (the color

@@ -225,6 +225,37 @@ main {
   stroke-linecap: round;
 }
 
+.shape-tools {
+  gap: 8px;
+}
+
+.shape-btn {
+  width: 52px;
+  min-height: 44px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  font: inherit;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.shape-btn:hover {
+  border-color: var(--muted);
+  background: #f6f8fa;
+}
+
+.shape-btn:active {
+  transform: translateY(1px);
+}
+
+.shape-btn:focus-visible {
+  outline: 3px solid rgba(9, 105, 218, 0.2);
+  outline-offset: 2px;
+}
+
 .color-field {
   display: inline-flex;
   flex-direction: column;
