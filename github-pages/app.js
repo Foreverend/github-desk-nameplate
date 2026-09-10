@@ -332,6 +332,7 @@ const el = {
   drawerClose: document.getElementById("drawer-close"),
   textInput: document.getElementById("text-input"),
   saveDesignBtn: document.getElementById("save-design"),
+  uploadSavedDesign: document.getElementById("upload-saved-design"),
   savedDesignsSection: document.getElementById("saved-designs-section"),
   savedDesignsGrid: document.getElementById("saved-designs-grid"),
   inspirationGrid: document.getElementById("inspiration-grid"),
@@ -854,12 +855,13 @@ function encodeGrid() {
   return encoded;
 }
 
-function encodeDesignGrid() {
+function encodeDesignGrid(grid = state.grid) {
   const encoded = [];
+  const isMatrix = Array.isArray(grid[0]);
   for (let r = 0; r < rows; r++) {
     let row = "";
     for (let c = 0; c < cols; c++) {
-      const value = state.grid[r][c];
+      const value = isMatrix ? grid[r][c] : grid[r * cols + c];
       if (value === null) {
         row += ".";
       } else if (value < BUILT_IN_COLOR_COUNT) {
@@ -884,7 +886,7 @@ function decodeGrid(g, colorCount = colors.length) {
   if (Array.isArray(g) && g.length === rows * cols) {
     return g.map((value) =>
       value === null ||
-      (Number.isInteger(value) && value >= 0 && value < colorCount)
+        (Number.isInteger(value) && value >= 0 && value < colorCount)
         ? value
         : null
     );
@@ -1092,8 +1094,17 @@ function embedDesignInPng(bytes, design) {
   throw new Error("The exported PNG is missing its end marker.");
 }
 
-async function downloadImage() {
-  const design = createDownloadDesign();
+async function downloadImage(source = {}) {
+  const grid = source.grid || state.grid;
+  const plateColor = source.plate || state.plateColor;
+  const logoColor = source.logo || state.logoColor;
+  const customColors = source.customColors || customColorValues();
+  const design = createDownloadDesign({
+    grid,
+    plateColor,
+    logoColor,
+    customColors,
+  });
   if (!design) {
     alert("Design downloads support up to 35 custom colors.");
     return;
@@ -1111,19 +1122,24 @@ async function downloadImage() {
     scale
   );
 
-  ctx.fillStyle = state.plateColor;
+  ctx.fillStyle = plateColor;
   roundRect(ctx, 0, 0, exportWidth, exportHeight, metrics.plateRadius);
   ctx.fill();
 
+  const exportColors = [
+    ...colors.slice(0, BUILT_IN_COLOR_COUNT).map((color) => color.color),
+    ...customColors,
+  ];
+  const isMatrix = Array.isArray(grid[0]);
   const gx = metrics.padding + metrics.logoSize + metrics.padding;
   const gy = metrics.padding;
   for (let r = 0; r < rows; r++)
     for (let c = 0; c < cols; c++) {
       const x = gx + c * (cell + metrics.gap);
       const y = gy + r * (cell + metrics.gap);
-      const v = state.grid[r][c];
+      const v = isMatrix ? grid[r][c] : grid[r * cols + c];
       ctx.fillStyle =
-        v === null ? emptyCellColor(state.plateColor) : colors[v].color;
+        v === null ? emptyCellColor(plateColor) : exportColors[v];
       roundRect(ctx, x, y, cell, cell, metrics.cellRadius);
       ctx.fill();
     }
@@ -1133,7 +1149,7 @@ async function downloadImage() {
     metrics.padding,
     metrics.padding,
     metrics.logoSize,
-    state.logoColor
+    logoColor
   );
   try {
     const blob = await canvasToPngBlob(canvas);
@@ -1193,17 +1209,21 @@ function downloadCounts() {
   downloadCanvas(canvas, "nameplate-counts.png");
 }
 
-function createDownloadDesign() {
-  const grid = encodeDesignGrid();
-  if (!grid) return null;
+function createDownloadDesign({
+  grid = state.grid,
+  plateColor = state.plateColor,
+  logoColor = state.logoColor,
+  customColors = customColorValues(),
+} = {}) {
+  const encodedGrid = encodeDesignGrid(grid);
+  if (!encodedGrid) return null;
 
   const design = {
     name: "nameplate-design",
-    plate: state.plateColor,
-    logo: state.logoColor,
-    grid,
+    plate: plateColor,
+    logo: logoColor,
+    grid: encodedGrid,
   };
-  const customColors = customColorValues();
   if (customColors.length) design.customColors = customColors;
   return design;
 }
@@ -1657,11 +1677,28 @@ async function readUploadedDesign(file) {
   return JSON.parse(UTF8_DECODER.decode(bytes));
 }
 
+function saveUploadedDesign(design, grid) {
+  const designs = loadSaved();
+  designs.push({
+    id: createSavedDesignId(),
+    g: grid,
+    plate: design.plate,
+    logo: design.logo,
+    customColors: getDesignCustomColors(design),
+    savedAt: Date.now(),
+  });
+  persistSaved(designs);
+  renderSavedDesigns();
+}
+
+let uploadToSavedDesigns = false;
+
 async function uploadDesignFile(file) {
   try {
     const design = await readUploadedDesign(file);
     const grid = validateUploadedDesign(design);
-    applyDesignData(design, grid);
+    if (uploadToSavedDesigns) saveUploadedDesign(design, grid);
+    else applyDesignData(design, grid);
     closeMenu();
   } catch (error) {
     const message =
@@ -1669,6 +1706,7 @@ async function uploadDesignFile(file) {
     alert(`Could not upload design: ${message}`);
   } finally {
     el.designFile.value = "";
+    uploadToSavedDesigns = false;
   }
 }
 
@@ -1794,12 +1832,35 @@ function renderSavedDesigns() {
     item.className = "saved-design-item";
     item.appendChild(createDesignCard(design, grid, "Load saved design"));
 
+    const downloadButton = document.createElement("button");
+    downloadButton.type = "button";
+    downloadButton.className = "saved-design-download";
+    downloadButton.setAttribute("aria-label", "Download saved design as PNG");
+    downloadButton.title = "Download";
+    downloadButton.innerHTML = `
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 3v12"></path>
+        <path d="m7 10 5 5 5-5"></path>
+        <path d="M5 21h14"></path>
+      </svg>
+      <span>Download</span>`;
+    downloadButton.addEventListener("click", () =>
+      downloadImage({
+        grid,
+        plate: design.plate || CONFIG.defaultPlateColor,
+        logo: design.logo || CONFIG.defaultLogoColor,
+        customColors: getDesignCustomColors(design),
+      })
+    );
+    item.appendChild(downloadButton);
+
     const deleteButton = document.createElement("button");
     deleteButton.type = "button";
     deleteButton.className = "saved-design-delete";
     deleteButton.setAttribute("aria-label", "Delete saved design");
     deleteButton.title = "Delete saved design";
-    deleteButton.textContent = "×";
+    deleteButton.innerHTML =
+      '<span aria-hidden="true">×</span><span>Remove</span>';
     deleteButton.addEventListener("click", () => {
       if (confirm("Delete this saved design?")) deleteDesign(design);
     });
@@ -1848,12 +1909,19 @@ function init() {
     el.columnNumbers.hidden = !state.showColumnNumbers;
     save();
   });
-  el.uploadDesign.addEventListener("click", () => el.designFile.click());
+  el.uploadDesign.addEventListener("click", () => {
+    uploadToSavedDesigns = false;
+    el.designFile.click();
+  });
+  el.uploadSavedDesign.addEventListener("click", () => {
+    uploadToSavedDesigns = true;
+    el.designFile.click();
+  });
   el.designFile.addEventListener("change", () => {
     const [file] = el.designFile.files;
     if (file) uploadDesignFile(file);
   });
-  el.downloadImage.addEventListener("click", downloadImage);
+  el.downloadImage.addEventListener("click", () => downloadImage());
   el.downloadCounts.addEventListener("click", downloadCounts);
   el.downloadDesign.addEventListener("click", downloadDesign);
   el.shiftLeft.addEventListener("click", () => shiftColumns(-1));

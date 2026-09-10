@@ -214,6 +214,42 @@
           </button>
         </div>
 
+        <div
+          class="toolbar-group toolbar-file-actions"
+          aria-label="Design files"
+        >
+          <button
+            type="button"
+            id="upload-design"
+            class="toolbar-action-button"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 21V9" />
+              <path d="m7 14 5-5 5 5" />
+              <path d="M5 3h14" />
+            </svg>
+            <span>Upload</span>
+          </button>
+          <input
+            type="file"
+            id="design-file"
+            accept=".json,.png,application/json,image/png"
+            hidden
+          />
+          <button
+            type="button"
+            id="download-image"
+            class="toolbar-action-button"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3v12" />
+              <path d="m7 10 5 5 5-5" />
+              <path d="M5 21h14" />
+            </svg>
+            <span>Download</span>
+          </button>
+        </div>
+
         <div class="toolbar-group zoom-control" aria-label="Nameplate size">
           <button
             type="button"
@@ -250,6 +286,18 @@
               <path d="M5 12h14" />
             </svg>
             <span>Add</span>
+          </button>
+          <button
+            type="button"
+            id="upload-saved-design"
+            class="save-design-button save-design-button-secondary"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 21V9" />
+              <path d="m7 14 5-5 5 5" />
+              <path d="M5 3h14" />
+            </svg>
+            <span>Upload</span>
           </button>
         </div>
         <div
@@ -315,30 +363,6 @@
 
         <section class="drawer-section">
           <h3>Actions</h3>
-          <button type="button" id="upload-design" class="menu-item">
-            <svg
-              viewBox="0 0 24 24"
-              width="20"
-              height="20"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M12 21V9" />
-              <path d="m7 14 5-5 5 5" />
-              <path d="M5 3h14" />
-            </svg>
-            <span>Upload design (json/png)</span>
-          </button>
-          <input
-            type="file"
-            id="design-file"
-            accept=".json,.png,application/json,image/png"
-            hidden
-          />
           <button type="button" id="download-design" class="menu-item">
             <svg
               viewBox="0 0 24 24"
@@ -356,24 +380,6 @@
               <path d="M5 21h14" />
             </svg>
             <span>Download design (json)</span>
-          </button>
-          <button type="button" id="download-image" class="menu-item">
-            <svg
-              viewBox="0 0 24 24"
-              width="20"
-              height="20"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M12 3v12" />
-              <path d="m7 10 5 5 5-5" />
-              <path d="M5 21h14" />
-            </svg>
-            <span>Download design (png)</span>
           </button>
           <button type="button" id="download-counts" class="menu-item">
             <svg
