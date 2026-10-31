@@ -1,0 +1,22 @@
+{
+  "name": "foreverend",
+  "plate": "#000000",
+  "logo": "#ffffff",
+  "grid": [
+    "31wwww121111111122134411431341212242432312241312w112",
+    "31w111111111121212212112222222112121112221211211w122",
+    "42w11111ww11www11ww12w22w12ww21www11ww22www122www122",
+    "32www11w11w1w212w11w2w22w2w22w1w121w21w2w11w1w22w134",
+    "41w1211w22w2w211www22w22w2www21w132www22w22w2w22w113",
+    "31w1121w21w1w221w2212w11w1w2221w132w2121w21w2w11w124",
+    "21w11111ww11w1311www12ww112www1w1222www1w11w21www111"
+  ],
+  "customColors": ["#0e4429", "#006d32", "#26a641", "#39d353"],
+  "commitGraph": {
+    "enabled": true,
+    "shades": 4,
+    "variation": 75,
+    "halo": 1,
+    "seed": 169
+  }
+}

@@ -13,6 +13,8 @@ This is a fork of [chriswblake/github-desk-nameplate](https://github.com/chriswb
 
 The models are unchanged. This fork adds a commit graph background to the designer, which is hosted at **[foreverend.github.io/github-desk-nameplate](https://foreverend.github.io/github-desk-nameplate/)**.
 
+![Nameplate design with a white name in front of a green commit graph](docs/foreverend-nameplate.png)
+
 What this fork adds:
 
 - **Commit graph background** - fills every empty location with a generated contribution graph, with busier weekdays, quiet weekends, and bursts of activity.
