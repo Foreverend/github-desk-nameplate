@@ -9,7 +9,9 @@ A GitHub contribution graph themed desk nameplate.
 
 ## About this fork
 
-This is a fork of [chriswblake/github-desk-nameplate](https://github.com/chriswblake/github-desk-nameplate), which is the original project and the source of the 3D models and the nameplate designer. The models are unchanged. This fork adds a commit graph background to the designer, which is hosted at **[foreverend.github.io/github-desk-nameplate](https://foreverend.github.io/github-desk-nameplate/)**.
+This is a fork of [chriswblake/github-desk-nameplate](https://github.com/chriswblake/github-desk-nameplate). All credit for the original project goes to [Chris (@chriswblake)](https://github.com/chriswblake), who created the nameplate, the 3D models, and the nameplate designer. Please star and share [the original repo](https://github.com/chriswblake/github-desk-nameplate).
+
+The models are unchanged. This fork adds a commit graph background to the designer, which is hosted at **[foreverend.github.io/github-desk-nameplate](https://foreverend.github.io/github-desk-nameplate/)**.
 
 What this fork adds:
 
