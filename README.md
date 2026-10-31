@@ -4,10 +4,25 @@
 
 A GitHub contribution graph themed desk nameplate.
 
-> This is a modified fork of [chriswblake/github-desk-nameplate](https://github.com/chriswblake/github-desk-nameplate), which adds the [commit graph background](#commit-graph-background) to the designer. It remains under the original [CC BY-NC 4.0](LICENSE) license.
-
 - 3 pieces (stand, nameplate, colored inserts)
 - Colored dots are printed separately and easy to insert to customize post-printing.
+
+## About this fork
+
+This is a fork of [chriswblake/github-desk-nameplate](https://github.com/chriswblake/github-desk-nameplate), which is the original project and the source of the 3D models and the nameplate designer. The models are unchanged. This fork adds a commit graph background to the designer, which is hosted at **[foreverend.github.io/github-desk-nameplate](https://foreverend.github.io/github-desk-nameplate/)**.
+
+What this fork adds:
+
+- **Commit graph background** - fills every empty location with a generated contribution graph, with busier weekdays, quiet weekends, and bursts of activity.
+- **Shades and Variation sliders** - choose how many shades of green to print and how evenly they are mixed.
+- **Text halo** - keeps the locations next to your text dark so the letters stand out.
+- **Shuffle commits** - generates a new pattern with the same settings.
+- **Automatic insert counts** - shades are added to the palette for you, and an **Inserts to print** list shows how many you need in each color. The total is also included in **Download counts**.
+- **Saved settings** - graph settings are kept in saved designs, in downloaded JSON and PNG files, and in undo/redo.
+
+See [Commit graph background](#commit-graph-background) for how to use it.
+
+This fork is shared under the same [CC BY-NC 4.0](LICENSE) license as the original project, so it can't be used commercially.
 
 ## How to Build
 
@@ -27,9 +42,9 @@ A GitHub contribution graph themed desk nameplate.
 1. Open `.3mf` file or load the `.stl` files into your slicing software.
 1. Print the parts. No special settings are required.
 1. Insert colored dots into the grid to spell your name or decorate!
-   > **💡 Tip:** You can use the [nameplate designer](https://chriswblake.github.io/github-desk-nameplate/) web app to try different ideas.
-  <a href="https://chriswblake.github.io/github-desk-nameplate/"><img width="350px" alt="screenshot of namplate designer" src="docs/designer-preview.png"></a>
-1. Share your design on this repo's [Show and Tell](https://github.com/chriswblake/github-desk-nameplate/discussions/1) page!  
+   > **💡 Tip:** You can use the [nameplate designer](https://foreverend.github.io/github-desk-nameplate/) web app to try different ideas.
+  <a href="https://foreverend.github.io/github-desk-nameplate/"><img width="350px" alt="screenshot of namplate designer" src="docs/designer-preview.png"></a>
+1. Share your design on the original project's [Show and Tell](https://github.com/chriswblake/github-desk-nameplate/discussions/1) page!  
 (and secretly your now even _more_ awesome desk setup)
 
 > [!TIP]
