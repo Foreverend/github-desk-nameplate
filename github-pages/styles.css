@@ -962,6 +962,92 @@ kbd {
   pointer-events: none;
 }
 
+/* Commit graph background ---------------------------------------------- */
+.commit-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: var(--space-3) var(--space-4);
+  max-width: 820px;
+  margin: 0 auto;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.commit-settings {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.commit-settings[hidden] {
+  display: none;
+}
+
+.commit-slider {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: var(--space-2);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.commit-slider output {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.commit-slider input {
+  grid-column: 1 / -1;
+  width: 100%;
+  /* Tall hit area so the thumb is easy to grab on touch screens. */
+  height: 32px;
+  margin: 0;
+  accent-color: #26a641;
+  cursor: pointer;
+}
+
+.commit-settings .save-design-button {
+  justify-self: start;
+}
+
+.print-summary h2 {
+  margin: 12px 0 var(--space-1);
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.print-list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.print-list li {
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 24px;
+  font-size: 0.9rem;
+}
+
+.print-swatch {
+  width: 18px;
+  height: 18px;
+  border: 1px solid rgba(31, 35, 40, 0.2);
+  border-radius: 4px;
+}
+
+.print-count {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Inspiration ---------------------------------------------------------- */
 .inspiration-section {
   margin: 32px auto 0;

@@ -4,6 +4,8 @@
 
 A GitHub contribution graph themed desk nameplate.
 
+> This is a modified fork of [chriswblake/github-desk-nameplate](https://github.com/chriswblake/github-desk-nameplate), which adds the [commit graph background](#commit-graph-background) to the designer. It remains under the original [CC BY-NC 4.0](LICENSE) license.
+
 - 3 pieces (stand, nameplate, colored inserts)
 - Colored dots are printed separately and easy to insert to customize post-printing.
 
@@ -33,6 +35,20 @@ A GitHub contribution graph themed desk nameplate.
 > [!TIP]
 > Print the inserts in different colors! 🦄
 
+
+## Commit graph background
+
+The designer can fill every empty location with a realistic-looking contribution graph, so the text sits in front of a full plate instead of empty holes.
+
+1. Pick a color and add your text. White has the strongest contrast against every shade of green.
+1. Turn on **Commit graph background**.
+1. Adjust the sliders:
+   - **Shades of green** - how many insert colors to print (2-6). Four matches GitHub's dark theme exactly.
+   - **Variation** - how evenly the shades are mixed. At 0% everything is the darkest shade, and at 100% every shade is equally common.
+   - **Text halo** - keeps locations next to the text in the darkest shades so the letters stay readable.
+1. Use **Shuffle commits** until you like the pattern.
+
+Shades are added to the color palette automatically, and **Inserts to print** lists how many inserts you need in each color. Print a few spares of each.
 
 ## Contributing
 

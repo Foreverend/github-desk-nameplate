@@ -35,6 +35,7 @@ planner can discover and display it.
     - `n` gray
     - `k` black
 - Custom colors are listed in the optional `customColors` array and referenced in order with `1`–`9`.
+- The optional `commitGraph` object stores the commit graph background settings: `enabled`, `shades`, `variation`, `halo`, and `seed`. Its shades are also saved as ordinary `customColors`, so the `grid` displays correctly without it.
 
 
 ## Deployment

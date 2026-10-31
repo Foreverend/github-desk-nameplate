@@ -303,6 +303,56 @@
         </div>
       </section>
 
+      <section class="commit-panel" aria-label="Commit graph background">
+        <div class="commit-controls">
+          <label class="toggle-item" for="commit-enabled">
+            <span>Commit graph background</span>
+            <input type="checkbox" id="commit-enabled" role="switch" />
+          </label>
+          <div class="commit-settings" id="commit-settings" hidden>
+            <label class="commit-slider" for="commit-shades">
+              <span>Shades of green</span>
+              <output id="commit-shades-value" for="commit-shades"></output>
+              <input type="range" id="commit-shades" step="1" />
+            </label>
+            <label class="commit-slider" for="commit-variation">
+              <span>Variation</span>
+              <output id="commit-variation-value" for="commit-variation"></output>
+              <input
+                type="range"
+                id="commit-variation"
+                min="0"
+                max="100"
+                step="5"
+              />
+            </label>
+            <label class="commit-slider" for="commit-halo">
+              <span>Text halo</span>
+              <output id="commit-halo-value" for="commit-halo"></output>
+              <input type="range" id="commit-halo" min="0" step="1" />
+            </label>
+            <button
+              type="button"
+              id="commit-shuffle"
+              class="save-design-button save-design-button-secondary"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 7h4l10 10h4" />
+                <path d="M3 17h4l3-3" />
+                <path d="m14 10 3-3h4" />
+                <path d="m18 4 3 3-3 3" />
+                <path d="m18 14 3 3-3 3" />
+              </svg>
+              <span>Shuffle commits</span>
+            </button>
+          </div>
+        </div>
+        <div class="print-summary">
+          <h2>Inserts to print: <span id="print-total">0</span></h2>
+          <ul class="print-list" id="print-list"></ul>
+        </div>
+      </section>
+
       <section
         class="inspiration-section saved-designs-section"
         id="saved-designs-section"
@@ -439,6 +489,7 @@
 
     <canvas id="export-canvas" hidden></canvas>
     <script src="font.js"></script>
+    <script src="commit-graph.js"></script>
     <script src="app.js"></script>
   </body>
 </html>

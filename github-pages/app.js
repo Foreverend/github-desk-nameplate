@@ -111,6 +111,8 @@ function loadLogoSvg() {
 
 const { rows, cols, colors } = CONFIG;
 const BUILT_IN_COLOR_COUNT = colors.length;
+const WHITE_INDEX = colors.findIndex((color) => color.key === "w");
+const CommitGraph = window.NameplateCommitGraph;
 
 function getNameplateMetrics(cell, { showLogo = true } = {}) {
   const gap = cell * NAMEPLATE_LAYOUT.gapRatio;
@@ -300,6 +302,7 @@ const state = {
   textSize: "regular", // letter width for the write-a-word tool
   textAlign: "left",
   showColumnNumbers: false,
+  commitGraph: { enabled: false, ...CommitGraph.DEFAULTS },
 };
 
 // DOM references
@@ -339,6 +342,17 @@ const el = {
   savedDesignsSection: document.getElementById("saved-designs-section"),
   savedDesignsGrid: document.getElementById("saved-designs-grid"),
   inspirationGrid: document.getElementById("inspiration-grid"),
+  commitEnabled: document.getElementById("commit-enabled"),
+  commitSettings: document.getElementById("commit-settings"),
+  commitShades: document.getElementById("commit-shades"),
+  commitShadesValue: document.getElementById("commit-shades-value"),
+  commitVariation: document.getElementById("commit-variation"),
+  commitVariationValue: document.getElementById("commit-variation-value"),
+  commitHalo: document.getElementById("commit-halo"),
+  commitHaloValue: document.getElementById("commit-halo-value"),
+  commitShuffle: document.getElementById("commit-shuffle"),
+  printList: document.getElementById("print-list"),
+  printTotal: document.getElementById("print-total"),
 };
 
 const cellEls = []; // cellEls[r][c] -> button element
@@ -412,7 +426,7 @@ function buildPalette() {
     btn.innerHTML = `<span class="count" data-count="${i}">0</span>`;
     btn.addEventListener("click", () => setActive(i));
     wrap.appendChild(btn);
-    if (color.custom) {
+    if (color.custom && !color.commit) {
       wrap.classList.add("custom-swatch-wrap");
       const remove = document.createElement("button");
       remove.type = "button";
@@ -454,18 +468,29 @@ function restoreCustomColors(values, legacyValue) {
     : typeof legacyValue === "string"
       ? [legacyValue]
       : [];
+  const shades = commitShadeValues();
   customValues
     .filter((value) => /^#[0-9a-f]{6}$/i.test(value))
     .forEach((color, index) => {
+      const shade = shades.indexOf(color.toLowerCase());
       colors.push({
-        label: color,
+        label: shade < 0 ? color : commitShadeLabel(color, shade),
         color,
         number: index + 1,
         key: index < 9 ? String(index + 1) : null,
         custom: true,
+        commit: shade >= 0,
       });
     });
   if (state.active >= colors.length) state.active = 0;
+}
+
+function renumberCustomColors() {
+  colors.slice(BUILT_IN_COLOR_COUNT).forEach((color, customIndex) => {
+    const number = customIndex + 1;
+    color.number = number;
+    color.key = number < 10 ? String(number) : null;
+  });
 }
 
 function addCustomColor(value) {
@@ -494,11 +519,7 @@ function removeCustomColor(index) {
       if (value === index) state.grid[r][c] = null;
       else if (value !== null && value > index) state.grid[r][c] = value - 1;
     }
-  colors.slice(BUILT_IN_COLOR_COUNT).forEach((color, customIndex) => {
-    const number = customIndex + 1;
-    color.number = number;
-    color.key = number < 10 ? String(number) : null;
-  });
+  renumberCustomColors();
   if (state.active === index) state.active = 0;
   else if (state.active > index) state.active--;
   buildPalette();
@@ -506,6 +527,136 @@ function removeCustomColor(index) {
   updateCounts();
   save();
   recordHistory();
+}
+
+/* --------------------------------------------------------------------- */
+/* Commit graph background                                               */
+/* --------------------------------------------------------------------- */
+function normalizeCommitGraph(value) {
+  const { DEFAULTS, MIN_SHADES, MAX_SHADES, MAX_HALO } = CommitGraph;
+  const setting = (key, min, max) =>
+    Number.isInteger(value?.[key])
+      ? Math.max(min, Math.min(max, value[key]))
+      : DEFAULTS[key];
+  return {
+    enabled: value?.enabled === true,
+    shades: setting("shades", MIN_SHADES, MAX_SHADES),
+    variation: setting("variation", 0, 100),
+    halo: setting("halo", 0, MAX_HALO),
+    seed: Number.isInteger(value?.seed) ? value.seed : DEFAULTS.seed,
+  };
+}
+
+function commitShadeValues() {
+  return state.commitGraph.enabled
+    ? CommitGraph.shadeColors(state.commitGraph.shades)
+    : [];
+}
+
+function commitShadeLabel(color, shade) {
+  return `Commit shade ${shade + 1} (${color})`;
+}
+
+// Foreground is everything the graph must leave alone: text, shapes, and dots
+// painted in any color other than the commit shades.
+function isForeground(value) {
+  return value !== null && !colors[value].commit;
+}
+
+// The commit shades belong to the background, so text and shapes never use them.
+function foregroundColorIndex() {
+  return colors[state.active].commit ? WHITE_INDEX : state.active;
+}
+
+// Replace the palette's commit shades with the current settings and regenerate
+// every location that isn't foreground. Indices shift when the palette changes,
+// so colors are held by reference until the grid is rewritten.
+function applyCommitGraph() {
+  const activeColor = colors[state.active];
+  const foreground = state.grid.map((row) =>
+    row.map((value) => (isForeground(value) ? colors[value] : null))
+  );
+  const otherCustomColors = colors
+    .slice(BUILT_IN_COLOR_COUNT)
+    .filter((color) => !color.commit);
+  const shades = commitShadeValues().map((color, shade) => ({
+    label: commitShadeLabel(color, shade),
+    color,
+    custom: true,
+    commit: true,
+  }));
+  colors.splice(BUILT_IN_COLOR_COUNT);
+  colors.push(...otherCustomColors, ...shades);
+  renumberCustomColors();
+
+  const firstShade = colors.length - shades.length;
+  const levels = state.commitGraph.enabled
+    ? CommitGraph.generateLevels({
+        ...state.commitGraph,
+        foreground: foreground.map((row) => row.map(Boolean)),
+      })
+    : null;
+  state.grid = foreground.map((row, r) =>
+    row.map((color, c) => {
+      if (color) return colors.indexOf(color);
+      return levels ? firstShade + levels[r][c] : null;
+    })
+  );
+  const activeIndex = colors.indexOf(activeColor);
+  state.active = activeIndex < 0 ? WHITE_INDEX : activeIndex;
+}
+
+function refreshCommitGraph() {
+  applyCommitGraph();
+  buildPalette();
+  repaintAll();
+  updateCounts();
+  save();
+}
+
+function syncCommitControls() {
+  const { enabled, shades, variation, halo } = state.commitGraph;
+  el.commitEnabled.checked = enabled;
+  el.commitSettings.hidden = !enabled;
+  el.commitShades.value = shades;
+  el.commitShadesValue.textContent = String(shades);
+  el.commitVariation.value = variation;
+  el.commitVariationValue.textContent = `${variation}%`;
+  el.commitHalo.value = halo;
+  el.commitHaloValue.textContent = halo
+    ? `${halo} ${halo === 1 ? "cell" : "cells"}`
+    : "Off";
+}
+
+function initCommitControls() {
+  el.commitShades.min = CommitGraph.MIN_SHADES;
+  el.commitShades.max = CommitGraph.MAX_SHADES;
+  el.commitHalo.max = CommitGraph.MAX_HALO;
+  syncCommitControls();
+
+  el.commitEnabled.addEventListener("change", () => {
+    state.commitGraph.enabled = el.commitEnabled.checked;
+    syncCommitControls();
+    refreshCommitGraph();
+    recordHistory();
+  });
+  [
+    [el.commitShades, "shades"],
+    [el.commitVariation, "variation"],
+    [el.commitHalo, "halo"],
+  ].forEach(([input, key]) => {
+    input.addEventListener("input", () => {
+      state.commitGraph[key] = Number(input.value);
+      syncCommitControls();
+      refreshCommitGraph();
+    });
+    input.addEventListener("change", recordHistory);
+  });
+  el.commitShuffle.addEventListener("click", () => {
+    state.commitGraph.seed = Math.floor(Math.random() * 2 ** 31);
+    refreshCommitGraph();
+    recordHistory();
+  });
 }
 
 // Relative brightness (0–1) of a hex color.
@@ -718,7 +869,37 @@ function updateCounts() {
   document.querySelectorAll(".count").forEach((n) => {
     n.textContent = String(counts[Number(n.dataset.count)]);
   });
+  renderPrintList(counts);
   return counts;
+}
+
+function usedColors(counts) {
+  return colors
+    .map((color, index) => ({ ...color, count: counts[index] }))
+    .filter((color) => color.count > 0);
+}
+
+function renderPrintList(counts) {
+  const used = usedColors(counts);
+  el.printList.replaceChildren(
+    ...used.map((color) => {
+      const item = document.createElement("li");
+      const swatch = document.createElement("span");
+      swatch.className = "print-swatch";
+      swatch.style.background = color.color;
+      const label = document.createElement("span");
+      label.className = "print-label";
+      label.textContent = color.label;
+      const count = document.createElement("span");
+      count.className = "print-count";
+      count.textContent = String(color.count);
+      item.append(swatch, label, count);
+      return item;
+    })
+  );
+  el.printTotal.textContent = String(
+    used.reduce((total, color) => total + color.count, 0)
+  );
 }
 
 function applyColors() {
@@ -959,6 +1140,7 @@ function save() {
         showColumnNumbers: state.showColumnNumbers,
         zooms: state.zooms,
         customColors: customColorValues(),
+        commitGraph: state.commitGraph,
       })
     );
   } catch (_) {
@@ -975,6 +1157,7 @@ function load() {
   }
   if (!data) return;
 
+  state.commitGraph = normalizeCommitGraph(data.commitGraph);
   restoreCustomColors(data.customColors, data.custom);
   applyGridString(data.g);
   if (typeof data.active === "number" && data.active < colors.length)
@@ -1012,6 +1195,7 @@ function captureHistoryState() {
     plateColor: state.plateColor,
     logoColor: state.logoColor,
     customColors: customColorValues(),
+    commitGraph: { ...state.commitGraph },
   };
 }
 
@@ -1038,6 +1222,7 @@ function recordHistory() {
 }
 
 function restoreHistoryState(snapshot) {
+  state.commitGraph = { ...snapshot.commitGraph };
   restoreCustomColors(snapshot.customColors);
   state.grid = snapshot.grid.map((row) => [...row]);
   state.active = Math.min(state.active, colors.length - 1);
@@ -1048,6 +1233,7 @@ function restoreHistoryState(snapshot) {
   state.arrowStart = null;
   buildPalette();
   applyColors();
+  syncCommitControls();
   repaintAll();
   updateCounts();
   setActive(state.active);
@@ -1202,11 +1388,13 @@ async function downloadImage(source = {}) {
   const plateColor = source.plate || state.plateColor;
   const logoColor = source.logo || state.logoColor;
   const customColors = source.customColors || customColorValues();
+  const commitGraph = source.grid ? source.commitGraph : state.commitGraph;
   const design = createDownloadDesign({
     grid,
     plateColor,
     logoColor,
     customColors,
+    commitGraph,
   });
   if (!design) {
     alert("Design downloads support up to 35 custom colors.");
@@ -1270,15 +1458,14 @@ async function downloadImage(source = {}) {
 
 function downloadCounts() {
   const counts = updateCounts();
-  const used = colors
-    .map((c, i) => ({ ...c, count: counts[i] }))
-    .filter((c) => c.count > 0);
+  const used = usedColors(counts);
+  const total = used.reduce((sum, color) => sum + color.count, 0);
   const scale = 2;
   const pad = 24;
   const titleH = 28;
   const legendRowH = 30;
   const contentRows = Math.max(used.length, 1);
-  const width = 360;
+  const width = 400;
   const height = pad + titleH + contentRows * legendRowH + pad;
   const { canvas, ctx } = prepareExportCanvas(width, height, scale);
 
@@ -1288,7 +1475,11 @@ function downloadCounts() {
   ctx.fillStyle = "#1f2328";
   ctx.font = "700 18px -apple-system, Segoe UI, Arial, sans-serif";
   ctx.textBaseline = "middle";
-  ctx.fillText("Inserts needed", pad, pad + titleH / 2);
+  ctx.fillText(
+    total ? `Inserts needed: ${total}` : "Inserts needed",
+    pad,
+    pad + titleH / 2
+  );
   if (used.length) {
     used.forEach((c, i) => {
       const y = pad + titleH + i * legendRowH + legendRowH / 2;
@@ -1317,6 +1508,7 @@ function createDownloadDesign({
   plateColor = state.plateColor,
   logoColor = state.logoColor,
   customColors = customColorValues(),
+  commitGraph = state.commitGraph,
 } = {}) {
   const encodedGrid = encodeDesignGrid(grid);
   if (!encodedGrid) return null;
@@ -1328,6 +1520,7 @@ function createDownloadDesign({
     grid: encodedGrid,
   };
   if (customColors.length) design.customColors = customColors;
+  if (commitGraph?.enabled) design.commitGraph = commitGraph;
   return design;
 }
 
@@ -1388,6 +1581,11 @@ function clearAll() {
   state.lastModified = null;
   state.arrowStart = null;
   state.highlight = null;
+  // The generated background is part of the dots being cleared.
+  state.commitGraph.enabled = false;
+  applyCommitGraph();
+  buildPalette();
+  syncCommitControls();
   repaintAll();
   updateCounts();
   save();
@@ -1422,7 +1620,7 @@ function addShape(shapeName) {
   let rightmost = -1;
   for (let r = 0; r < rows; r++) {
     for (let c = cols - 1; c >= 0; c--) {
-      if (state.grid[r][c] !== null) {
+      if (isForeground(state.grid[r][c])) {
         rightmost = Math.max(rightmost, c);
         break;
       }
@@ -1435,15 +1633,17 @@ function addShape(shapeName) {
     return;
   }
 
+  const shapeColor = foregroundColorIndex();
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < width; c++) {
-      if (shape[r][c] === "#") state.grid[r][start + c] = state.active;
+      if (shape[r][c] === "#") state.grid[r][start + c] = shapeColor;
     }
   }
 
   state.highlight = null;
   state.lastModified = null;
   state.arrowStart = null;
+  if (state.commitGraph.enabled) applyCommitGraph();
   repaintAll();
   updateCounts();
   save();
@@ -1484,6 +1684,7 @@ function applyText(raw) {
   const word = String(raw == null ? "" : raw);
   if (!word) return; // nothing typed — leave the current design alone
 
+  const textColor = foregroundColorIndex();
   // Writing a word replaces the current dots so the result is predictable.
   state.grid = Array.from({ length: rows }, () => Array(cols).fill(null));
 
@@ -1516,7 +1717,7 @@ function applyText(raw) {
       for (let r = 0; r < rows; r++) {
         const target = offset + tc;
         if (col[r] && target >= 0 && target < cols)
-          state.grid[r][target] = state.active;
+          state.grid[r][target] = textColor;
       }
     }
   }
@@ -1524,6 +1725,7 @@ function applyText(raw) {
   state.highlight = null;
   state.lastModified = null;
   state.arrowStart = null;
+  if (state.commitGraph.enabled) applyCommitGraph();
   repaintAll();
   updateCounts();
   save();
@@ -1588,6 +1790,7 @@ function saveDesign() {
     plate: state.plateColor,
     logo: state.logoColor,
     customColors: customColorValues(),
+    commitGraph: { ...state.commitGraph },
     savedAt: Date.now(),
   });
   persistSaved(arr);
@@ -1653,6 +1856,7 @@ function getDesignCustomColors(design) {
 }
 
 function applyDesignData(design, grid) {
+  state.commitGraph = normalizeCommitGraph(design.commitGraph);
   restoreCustomColors(design.customColors, design.custom);
   applyGridString(grid);
   if (typeof design.plate === "string") state.plateColor = design.plate;
@@ -1662,6 +1866,7 @@ function applyDesignData(design, grid) {
   state.arrowStart = null;
   applyColors();
   buildPalette();
+  syncCommitControls();
   repaintAll();
   updateCounts();
   setActive(state.active);
@@ -1794,6 +1999,7 @@ function saveUploadedDesign(design, grid) {
     plate: design.plate,
     logo: design.logo,
     customColors: getDesignCustomColors(design),
+    commitGraph: normalizeCommitGraph(design.commitGraph),
     savedAt: Date.now(),
   });
   persistSaved(designs);
@@ -1959,6 +2165,7 @@ function renderSavedDesigns() {
         plate: design.plate || CONFIG.defaultPlateColor,
         logo: design.logo || CONFIG.defaultLogoColor,
         customColors: getDesignCustomColors(design),
+        commitGraph: design.commitGraph,
       })
     );
     item.appendChild(downloadButton);
@@ -1999,6 +2206,7 @@ function init() {
   recordHistory();
   el.columnNumbers.hidden = !state.showColumnNumbers;
   el.showColumnNumbers.checked = state.showColumnNumbers;
+  initCommitControls();
 
   el.plateColor.addEventListener("input", (e) => {
     state.plateColor = e.target.value;
